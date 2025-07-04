@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>نرم افزار مدیریت وظایف ماهانه - فیلتراسیون اصفهان</title>
+  <style>
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0; padding: 0;
+      font-family: "IranSans", Tahoma, sans-serif;
+      background: linear-gradient(135deg, #f0f5ff, #e0e7ff);
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+    }
+    h1 {
+      margin: 0 0 1rem 0;
+      font-weight: 900;
+      font-size: 2rem;
+      color: #0a1e63;
+      text-align: center;
+      user-select:none;
+    }
+    /* Container */
+    #app {
+      width: 100%;
+      max-width: 960px;
+      background: #fff;
+      box-shadow: 0 3px 20px rgba(0,0,0,0.12);
+      border-radius: 12px;
+      padding: 1rem 1.8rem 2rem 1.8rem;
+      box-sizing: border-box;
+    }
+    /* Password modal */
+    #passwordModal {
+      position: fixed;
+      top: 0; left: 0; right:0; bottom:0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #passwordModalContent {
+      background: white;
+      border-radius: 10px;
+      padding: 2rem 3rem;
+      text-align: center;
+      width: 90vw;
+      max-width: 380px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    #passwordModalContent h2 {
+      margin-bottom: 1rem;
+      color: #1a2a6c;
+    }
+    #passwordInput {
+      font-size: 1.3rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 2px solid #1a2a6c;
+      width: 80%;
+      text-align: center;
+      direction: ltr;
+      margin-bottom: 1.2rem;
+    }
+    #passwordSubmitBtn {
+      cursor: pointer;
+      background: #1a2a6c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      transition: background 0.3s ease;
+    }
+    #passwordSubmitBtn:hover {
+      background: #374ba0;
+    }
+    #passwordError {
+      color: #cc0000;
+      font-size: 0.9rem;
+      height: 1.2rem;
+    }
+    /* Main controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1rem;
+      justify-content: flex-start;
+    }
+    button {
+      cursor: pointer;
+      background: #1a2a6c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.4rem;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 3px 10px rgba(26, 42, 108, 0.3);
+      transition: background 0.25s ease;
+      user-select:none;
+    }
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    button:hover:not(:disabled) {
+      background: #233a8a;
+    }
+    /* Task Form Modal */
+    #taskFormModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 900;
+      padding: 1rem;
+    }
+    #taskFormContent {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      padding: 1.2rem 1.4rem 2rem 1.4rem;
+      max-width: 480px;
+      width: 100%;
+      box-sizing: border-box;
+      animation: fadeInScale 0.25s ease forwards;
+    }
+    @keyframes fadeInScale {
+      from {opacity: 0; transform: scale(0.85);}
+      to {opacity: 1; transform: scale(1);}
+    }
+    #taskFormContent h3 {
+      margin-top: 0; margin-bottom: 1rem;
+      color: #1a2a6c;
+      font-weight: 900;
+      font-size: 1.6rem;
+      text-align: center;
+      user-select:none;
+    }
+    form label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      margin-top: 1rem;
+    }
+    input[type="text"], input[type="tel"], textarea, select, input[type="date"] {
+      width: 100%;
+      font-size: 1.05rem;
+      padding: 0.45rem 0.6rem;
+      border-radius: 8px;
+      border: 2px solid #aaa;
+      transition: border-color 0.3s ease;
+      font-family: inherit;
+      outline-offset: 2px;
+      outline-color: #1a2a6c;
+      box-sizing: border-box;
+    }
+    input[type="text"]:focus, input[type="tel"]:focus, textarea:focus, select:focus, input[type="date"]:focus {
+      border-color: #1a2a6c;
+    }
+    textarea {
+      resize: vertical;
+      height: 80px;
+      line-height: 1.3;
+    }
+    .form-row {
+      margin-top: 0.4rem;
+    }
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.8rem;
+    }
+    .form-actions button {
+      width: 48%;
+    }
+    /* Tasks table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      table-layout: fixed;
+      word-wrap: break-word;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1.5px solid #bbb;
+      padding: 0.6rem 0.75rem;
+      text-align: center;
+      vertical-align: middle;
+      user-select:none;
+    }
+    th {
+      background: #1a2a6c;
+      color: white;
+      font-weight: 700;
+      user-select: none;
+    }
+    td.actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      padding-top: 0.3rem;
+      padding-bottom: 0.3rem;
+    }
+    td.actions button {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      font-weight: 600;
+      width: auto;
+      box-shadow: none;
+    }
+    td.actions button.edit {
+      background: #00a8ff;
+    }
+    td.actions button.edit:hover {
+      background: #007acc;
+    }
+    td.actions button.delete {
+      background: #ff3860;
+    }
+    td.actions button.delete:hover {
+      background: #b72b4c;
+    }
+    /* Importance badges */
+    .importance-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: white;
+      user-select: none;
+    }
+    .importance-عادی {
+      background-color: #6c757d;
+    }
+    .importance-مهم {
+      background-color: #fd7e14;
+    }
+    .importance-ضروری {
+      background-color: #dc3545;
+    }
+    /* Alert styling */
+    #alerts {
+      margin-top: 0.6rem;
+      padding: 0.8rem 1rem;
+      background-color: #fff3cd;
+      border: 1.5px solid #ffeeba;
+      border-radius: 8px;
+      color: #856404;
+      font-weight: 600;
+      user-select:none;
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 0.95rem;
+    }
+    /* Responsive: mobile */
+    @media (max-width: 576px) {
+      #taskFormContent {
+        max-width: 100%;
+      }
+      .controls {
+        justify-content: center;
+      }
+      td.actions {
+        flex-direction: column;
+        gap: 6px;
+      }
+      td.actions button {
+        width: 100%;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      tr {
+        margin-bottom: 1rem;
+        border: 1.5px solid #bbb;
+        border-radius: 10px;
+        padding: 0.5rem;
+      }
+      td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+      }
+      td:before {
+        position: absolute;
+        left: 10px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: 700;
+      }
+      td:nth-of-type(1):before { content: "شماره"; }
+      td:nth-of-type(2):before { content: "موضوع وظیفه"; }
+      td:nth-of-type(3):before { content: "شرح وظیفه"; }
+      td:nth-of-type(4):before { content: "مهلت انجام (شمسی)"; }
+      td:nth-of-type(5):before { content: "اهمیت"; }
+      td:nth-of-type(6):before { content: "نام شخص"; }
+      td:nth-of-type(7):before { content: "شماره موبایل"; }
+      td:nth-of-type(8):before { content: "مهلت باقیمانده (روز)"; }
+      td:nth-of-type(9):before { content: "تاریخ ثبت (میلادی)"; }
+      td:nth-of-type(10):before { content: "عملیات"; }
+    }
+  
+    /* خطوط جداکننده بین بخش‌های وظیفه */
+    tbody tr {
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+    }
+    /* حذف حاشیه انتهایی */
+    tbody tr:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    /* دکمه انجام شد */
+    td.actions button.done {
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.9rem;
+      margin-left: 6px;
+      cursor: pointer;
+    }
+    td.actions button.done:hover {
+      background: #218838;
+    }
+</style>
+</head>
+<body>
+
+<div id="passwordModal" role="dialog" aria-modal="true" aria-labelledby="passwdLabel">
+  <div id="passwordModalContent">
+    <h2 id="passwdLabel">ورود با رمز عبور</h2>
+    <input id="passwordInput" type="password" inputmode="numeric" placeholder="رمز عبور را وارد کنید" aria-describedby="passwordError" />
+    <div id="passwordError" role="alert" aria-live="assertive"></div>
+    <button id="passwordSubmitBtn" type="button">ورود</button>
+  </div>
+</div>
+
+<div id="app" aria-hidden="true" role="main">
+  <h1>وظایف بخش پشتیبانی شرکت فیلتراسیون شهرک علمی و تحقیقاتی اصفهان</h1>
+
+  <div id="datetimeContainer" style="text-align:center; font-weight: bold; color: #1a2a6c; font-size: 1rem; margin-bottom: 0.7rem;"></div>
+    <div class="controls" aria-label="کنترل‌های برنامه">
+    <button id="btnNewTask" type="button" aria-haspopup="dialog" aria-controls="taskFormModal">ثبت وظیفه جدید</button>
+    <button id="btnSaveAll" type="button" title="ذخیره کلیه وظایف برای بار بعدی">ذخیره کلی فرم</button>
+    
+  </div>
+  
+  <section id="alerts" aria-live="polite" aria-atomic="true" style="display:none;"></section>
+
+  <table aria-label="فهرست وظایف">
+    <thead>
+      <tr>
+        <th>شماره</th>
+        <th>موضوع وظیفه</th>
+        <th>شرح وظیفه</th>
+        <th>مهلت انجام (تاریخ شمسی)</th>
+        <th>اهمیت</th>
+        <th>نام شخص</th>
+        <th>شماره موبایل</th>
+        <th>مهلت باقیمانده (روز)</th>
+        <th>تاریخ ثبت (میلادی)</th>
+        <th>عملیات</th>
+      </tr>
+    </thead>
+    <tbody id="taskListBody" tabindex="0">
+      <!-- وظایف اینجا اضافه می‌شود -->
+    </tbody>
+  </table>
+</div>
+
+<!-- فرم ثبت / ویرایش وظیفه -->
+<div id="taskFormModal" role="dialog" aria-modal="true" aria-labelledby="taskFormTitle" aria-hidden="true">
+  <div id="taskFormContent">
+    <h3 id="taskFormTitle">ثبت وظیفه جدید</h3>
+    <form id="taskForm" novalidate>
+      <label for="subjectInput">موضوع وظیفه:</label>
+      <input type="text" id="subjectInput" name="subject" autocomplete="off" />
+
+      <label for="descriptionInput">شرح وظیفه:</label>
+      <textarea id="descriptionInput" name="description" rows="3"></textarea>
+
+      <label for="deadlineInput">مهلت انجام وظیفه:</label>
+      <input type="date" id="deadlineInput" name="deadline" autocomplete="off" aria-describedby="deadlineHelp" />
+      <div id="deadlineHelp" style="font-size:0.85rem; margin-top: 2px; color: #555;">تاریخ انجام وظیفه را انتخاب کنید</div>
+      
+      <label for="importanceSelect">اهمیت وظیفه:</label>
+      <select id="importanceSelect" name="importance">
+        <option value="" selected>انتخاب اهمیت (اختیاری)</option>
+        <option value="عادی">عادی</option>
+        <option value="مهم">مهم</option>
+        <option value="ضروری">ضروری</option>
+      </select>
+
+      <label for="personNameInput">نام شخص:</label>
+      <input type="text" id="personNameInput" name="personName" autocomplete="off" />
+
+      <label for="personPhoneInput">شماره موبایل:</label>
+      <input type="tel" id="personPhoneInput" name="personPhone" autocomplete="off" pattern="^09\d{9}$" placeholder="مثال: 09123456789" />
+
+      <input type="hidden" id="taskIdInput" name="taskId" value="" />
+
+      <div class="form-actions">
+        <button id="btnSaveTask" type="submit">ثبت وظیفه</button>
+        <button id="btnCancelTask" type="button">انصراف</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (() => {
+    "use strict";
+
+    // تبدیل تاریخ میلادی به تاریخ شمسی (هجری شمسی)
+    function gregorianToJalali(gy, gm, gd) {
+      const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+      let jy;
+      if(gy > 1600){
+        jy = 979;
+        gy -= 1600;
+      }else{
+        jy = 0;
+        gy -= 621;
+      }
+      let gy2 = (gm > 2) ? (gy +1) : gy;
+      let days = 365 * gy + Math.floor((gy2 +3)/4) - Math.floor((gy2 +99)/100) + Math.floor((gy2 +399)/400) -80 + gd + g_d_m[gm-1];
+
+      jy += 33 * Math.floor(days/12053);
+      days %= 12053;
+      jy += 4 * Math.floor(days/1461);
+      days %= 1461;
+      if(days > 365){
+        jy += Math.floor((days-1)/365);
+        days = (days-1)%365;
+      }
+      let jm, jd;
+      if(days < 186){
+        jm = 1 + Math.floor(days/31);
+        jd = 1 + days%31;
+      }else{
+        jm = 7 + Math.floor((days-186)/30);
+        jd = 1 + (days-186)%30;
+      }
+      return [jy, jm, jd];
+    }
+    function formatJalaliDate(date) {
+      if (!(date instanceof Date) || isNaN(date)) return "";
+      const [jy, jm, jd] = gregorianToJalali(date.getFullYear(), date.getMonth()+1, date.getDate());
+      return `${jy}/${jm.toString().padStart(2,"0")}/${jd.toString().padStart(2,"0")}`;
+    }
+
+    // === GLOBALS ===
+    const PASSWORD = "4386";
+
+    const passwordModal = document.getElementById("passwordModal");
+    const passwordInput = document.getElementById("passwordInput");
+    const passwordSubmitBtn = document.getElementById("passwordSubmitBtn");
+    const passwordError = document.getElementById("passwordError");
+
+    const app = document.getElementById("app");
+    const btnNewTask = document.getElementById("btnNewTask");
+    const btnSaveAll = document.getElementById("btnSaveAll");
+
+    const alertsSection = document.getElementById("alerts");
+
+    const taskFormModal = document.getElementById("taskFormModal");
+    const taskForm = document.getElementById("taskForm");
+    const taskFormTitle = document.getElementById("taskFormTitle");
+
+    const subjectInput = document.getElementById("subjectInput");
+    const descriptionInput = document.getElementById("descriptionInput");
+    const deadlineInput = document.getElementById("deadlineInput");
+    const importanceSelect = document.getElementById("importanceSelect");
+    const taskIdInput = document.getElementById("taskIdInput");
+    const personNameInput = document.getElementById("personNameInput");
+    const personPhoneInput = document.getElementById("personPhoneInput");
+
+    const btnSaveTask = document.getElementById("btnSaveTask");
+    const btnCancelTask = document.getElementById("btnCancelTask");
+
+    const taskListBody = document.getElementById("taskListBody");
+
+    // آرایه وظایف با ساختار
+    // {id, subject, description, deadline(ISO string), importance, personName, personPhone, registeredDate (ISO string)}
+    let tasks = [];
+
+    // محاسبه مهلت باقیمانده به روز
+    function calculateRemainingDays(deadlineISO) {
+      if (!deadlineISO) return "";
+      const today = new Date();
+      const deadlineDate = new Date(deadlineISO);
+      if(isNaN(deadlineDate)) return "";
+      // صفر کردن زمان برای محاسبه دقیق
+      deadlineDate.setHours(0,0,0,0);
+      today.setHours(0,0,0,0);
+      const diffMs = deadlineDate - today;
+      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    // نمایش هشدار وظایف با مهلت 3 روز یا کمتر مانده
+    function checkAndShowAlerts() {
+      alertsSection.innerHTML = "";
+      alertsSection.style.display = "none";
+
+      if(tasks.length === 0) return;
+
+      let alertMessages = [];
+
+      tasks.forEach(task => {
+        const remainingDays = calculateRemainingDays(task.deadline);
+        if(remainingDays !== "" && remainingDays >=0 && remainingDays <=3) {
+          alertMessages.push(`به وظیفه "${task.subject||"بی‌نام"}" ${remainingDays===0 ? "امروز" : `در ${remainingDays} روز`} مهلت انجام مانده است! اهمیت: ${task.importance||"نامشخص"}`);
+        }
+      });
+
+      if(alertMessages.length > 0) {
+        alertsSection.style.display = "block";
+        alertMessages.forEach(msg => {
+          let p = document.createElement("p");
+          p.textContent = msg;
+          alertsSection.appendChild(p);
+        });
+      }
+    }
+
+    // ذخیره در localStorage
+    function saveTasksToStorage() {
+      try {
+        localStorage.setItem("tasks", JSON.stringify(tasks));
+        alert("وظایف با موفقیت ذخیره شدند.");
+      } catch(e) {
+        alert("خطا در ذخیره سازی وظایف در مرورگر!");
+      }
+    }
+    // بارگذاری از localStorage
+    function loadTasksFromStorage() {
+      try {
+        const data = localStorage.getItem("tasks");
+        if(data) {
+          const loaded = JSON.parse(data);
+          if(Array.isArray(loaded)){
+            tasks = loaded.filter(t => t.id);
+          }
+        }
+      } catch(e) {
+        tasks = [];
+      }
+    }
+
+    // تایید رمز
+    function handlePasswordSubmit() {
+      if(passwordInput.value === PASSWORD) {
+        passwordModal.style.display = "none";
+        app.setAttribute("aria-hidden", "false");
+        passwordError.textContent = "";
+        passwordInput.value = "";
+        passwordInput.blur();
+
+        loadTasksFromStorage();
+        renderTaskList();
+        checkAndShowAlerts();
+
+        btnNewTask.focus();
+      } else {
+        passwordError.textContent = "رمز عبور اشتباه است!";
+        passwordInput.value = "4386";
+        passwordInput.focus();
+      }
+    }
+
+    passwordSubmitBtn.addEventListener("click", handlePasswordSubmit);
+    passwordInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter"){
+        e.preventDefault();
+        handlePasswordSubmit();
+      }
+    });
+
+    // باز کردن فرم (جدید یا ویرایش)
+    function openTaskForm(task=null) {
+      taskForm.reset();
+      taskIdInput.value = "";
+      btnSaveTask.textContent = "ثبت وظیفه";
+
+      if(task) {
+        taskFormTitle.textContent = "ویرایش وظیفه";
+        subjectInput.value = task.subject || "";
+        descriptionInput.value = task.description || "";
+        importanceSelect.value = task.importance || "";
+        personNameInput.value = task.personName || "";
+        personPhoneInput.value = task.personPhone || "";
+        taskIdInput.value = task.id || "";
+
+        if(task.deadline) {
+          const d = new Date(task.deadline);
+          if(!isNaN(d)) {
+            const isoDate = d.toISOString().slice(0,10);
+            deadlineInput.value = isoDate;
+          } else {
+            deadlineInput.value = "";
+          }
+        } else {
+          deadlineInput.value = "";
+        }
+
+        btnSaveTask.textContent = "ویرایش وظیفه";
+      } else {
+        taskFormTitle.textContent = "ثبت وظیفه جدید";
+        deadlineInput.value = "";
+        importanceSelect.value = "";
+        personNameInput.value = "";
+        personPhoneInput.value = "";
+      }
+      taskFormModal.style.display = "flex";
+      taskFormModal.setAttribute("aria-hidden", "false");
+      subjectInput.focus();
+    }
+
+    // بستن فرم وظیفه
+    function closeTaskForm() {
+      taskFormModal.style.display = "none";
+      taskFormModal.setAttribute("aria-hidden", "true");
+      btnNewTask.focus();
+    }
+
+    btnNewTask.addEventListener("click", () => openTaskForm());
+    btnCancelTask.addEventListener("click", closeTaskForm);
+
+    // رندر لیست وظایف در جدول
+    function renderTaskList() {
+      taskListBody.innerHTML = "";
+      if(tasks.length === 0){
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 10;
+        td.style.fontWeight = "bold";
+        td.textContent = "هیچ وظیفه‌ای ثبت نشده است";
+        tr.appendChild(td);
+        taskListBody.appendChild(tr);
+        return;
+      }
+      tasks.forEach((task, index) => {
+        const tr = document.createElement("tr");
+
+        // شماره
+        const tdNum = document.createElement("td");
+        tdNum.textContent = (index + 1).toString();
+        tr.appendChild(tdNum);
+
+        // موضوع وظیفه
+        const tdSubject = document.createElement("td");
+        tdSubject.textContent = task.subject || "";
+        tr.appendChild(tdSubject);
+
+        // شرح وظیفه
+        const tdDesc = document.createElement("td");
+        const descText = (task.description || "").length > 50 ? (task.description.slice(0, 50) + "...") : (task.description || "");
+        tdDesc.textContent = descText;
+        if(task.description && task.description.length > 50) {
+          tdDesc.title = task.description;
+        }
+        tr.appendChild(tdDesc);
+
+        // مهلت انجام (تاریخ شمسی)
+        const tdDeadline = document.createElement("td");
+        if(task.deadline){
+          const d = new Date(task.deadline);
+          if(!isNaN(d)) {
+            tdDeadline.textContent = formatJalaliDate(d);
+            tdDeadline.title = `مهلت انجام به میلادی: ${d.toLocaleDateString('fa-IR')}`;
+          } else {
+            tdDeadline.textContent = "";
+          }
+        } else {
+          tdDeadline.textContent = "";
+        }
+        tr.appendChild(tdDeadline);
+
+        // اهمیت
+        const tdImportance = document.createElement("td");
+        const spanImp = document.createElement("span");
+        let imp = task.importance || "";
+        spanImp.classList.add("importance-badge");
+        if(imp === "عادی" || imp === "مهم" || imp === "ضروری") {
+          spanImp.classList.add(`importance-${imp}`);
+        }
+        spanImp.textContent = imp;
+        tdImportance.appendChild(spanImp);
+        tr.appendChild(tdImportance);
+
+        // نام شخص
+        const tdPersonName = document.createElement("td");
+        tdPersonName.textContent = task.personName || "";
+        tr.appendChild(tdPersonName);
+
+        // شماره موبایل
+        const tdPersonPhone = document.createElement("td");
+        tdPersonPhone.textContent = task.personPhone || "";
+        tr.appendChild(tdPersonPhone);
+
+        // مهلت باقیمانده (روز)
+        const tdRemaining = document.createElement("td");
+        const remDays = calculateRemainingDays(task.deadline);
+        tdRemaining.textContent = remDays === "" ? "" : remDays >= 0 ? remDays : "گذشته";
+        tr.appendChild(tdRemaining);
+
+        // تاریخ ثبت (میلادی)
+        const tdRegistered = document.createElement("td");
+        if(task.registeredDate) {
+          const dt = new Date(task.registeredDate);
+          if(!isNaN(dt)) {
+            tdRegistered.textContent = dt.toLocaleDateString("fa-IR");
+          } else {
+            tdRegistered.textContent = "";
+          }
+        } else {
+          tdRegistered.textContent = "";
+        }
+        tr.appendChild(tdRegistered);
+
+        // عملیات
+        const tdActions = document.createElement("td");
+        tdActions.className = "actions";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.type = "button";
+        btnEdit.className = "edit";
+        btnEdit.title = "ویرایش این وظیفه";
+        btnEdit.setAttribute("aria-label", `ویرایش وظیفه شماره ${index+1}`);
+        btnEdit.textContent = "ویرایش";
+        btnEdit.addEventListener("click", () => openTaskForm(task));
+
+        const btnDelete = document.createElement("button");
+        btnDelete.type = "button";
+        btnDelete.className = "delete";
+        btnDelete.title = "حذف این وظیفه";
+        btnDelete.setAttribute("aria-label", `حذف وظیفه شماره ${index+1}`);
+        btnDelete.textContent = "حذف";
+        btnDelete.addEventListener("click", () => {
+          if(confirm(`آیا از حذف وظیفه "${task.subject||"بی‌نام"}" اطمینان دارید؟`)) {
+            tasks = tasks.filter(t => t.id !== task.id);
+            renderTaskList();
+            checkAndShowAlerts();
+            saveTasksToStorage();
+          }
+        });
+
+        tdActions.appendChild(btnEdit);
+        tdActions.appendChild(btnDelete);
+
+        // دکمه انجام شد
+        const btnDone = document.createElement("button");
+        btnDone.type = "button";
+        btnDone.className = "done";
+        btnDone.title = "علامت‌گذاری به عنوان انجام شده";
+        btnDone.textContent = "انجام شد";
+        btnDone.addEventListener("click", () => {
+          // تغییر پس‌زمینه ردیف به سبز روشن
+          tr.style.backgroundColor = "#d4edda";
+          tr.style.border = "2px solid #28a745";
+        });
+        tdActions.appendChild(btnDone);
+
+        tr.appendChild(tdActions);
+
+        taskListBody.appendChild(tr);
+      });
+    }
+
+    // ذخیره یا ویرایش وظیفه از فرم
+    taskForm.addEventListener("submit", e => {
+      e.preventDefault();
+
+      const subject = subjectInput.value.trim() || "";
+      const description = descriptionInput.value.trim() || "";
+      const deadlineVal = deadlineInput.value;
+      const importance = importanceSelect.value || "";
+      const personName = personNameInput.value.trim() || "";
+      const personPhone = personPhoneInput.value.trim() || "";
+      const id = taskIdInput.value;
+
+      // اعتبارسنجی شماره موبایل در صورت وارد شدن
+      if(personPhone.length > 0) {
+        const phoneRegex = /^09\d{9}$/;
+        if(!phoneRegex.test(personPhone)) {
+          alert("شماره موبایل معتبر نیست. لطفاً شماره را به فرمت 09xxxxxxxxx وارد کنید.");
+          personPhoneInput.focus();
+          return;
+        }
+      }
+
+      // تبدیل مقدار تاریخ به شیء Date یا null
+      let deadlineISO = null;
+      if(deadlineVal) {
+        const d = new Date(deadlineVal);
+        if(isNaN(d)) {
+          alert("تاریخ مهلت انجام وظیفه معتبر نیست.");
+          deadlineInput.focus();
+          return;
+        }
+        deadlineISO = d.toISOString();
+      }
+
+      if(id) {
+        // ویرایش وظیفه موجود
+        const idx = tasks.findIndex(t => t.id === id);
+        if(idx !== -1) {
+          tasks[idx].subject = subject;
+          tasks[idx].description = description;
+          tasks[idx].deadline = deadlineISO;
+          tasks[idx].importance = importance;
+          tasks[idx].personName = personName;
+          tasks[idx].personPhone = personPhone;
+        }
+      } else {
+        // ثبت وظیفه جدید
+        const newTask = {
+          id: Date.now().toString() + Math.floor(Math.random()*1000).toString(),
+          subject,
+          description,
+          deadline: deadlineISO,
+          importance,
+          personName,
+          personPhone,
+          registeredDate: new Date().toISOString()
+        };
+        tasks.push(newTask);
+      }
+
+      renderTaskList();
+      checkAndShowAlerts();
+      closeTaskForm();
+    });
+
+    // ذخیره کلی وظایف دکمه
+    btnSaveAll.addEventListener("click", () => {
+      if(tasks.length === 0) {
+        alert("هیچ وظیفه‌ای برای ذخیره وجود ندارد.");
+        return;
+      }
+      saveTasksToStorage();
+    });
+
+    
+    const btnExportBluetooth = document.getElementById("btnExportBluetooth");
+
+    btnExportBluetooth?.addEventListener("click", () => {
+      if (tasks.length === 0) {
+        alert("هیچ وظیفه‌ای برای ارسال وجود ندارد.");
+        return;
+      }
+
+      try {
+        const fileContent = JSON.stringify(tasks, null, 2);
+        const blob = new Blob([fileContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "وظایف.json";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
+
+        alert("فایل وظایف با موفقیت ذخیره شد. اکنون می‌توانید آن را از طریق بلوتوث ارسال کنید.");
+      } catch (e) {
+        alert("خطا در ایجاد فایل جهت ارسال با بلوتوث!");
+      }
+    });
+
+    
+    function updateDateTime() {
+      const now = new Date();
+      const [jy, jm, jd] = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const hour = now.getHours().toString().padStart(2, '0');
+      const minute = now.getMinutes().toString().padStart(2, '0');
+      const second = now.getSeconds().toString().padStart(2, '0');
+      const datetimeStr = `تاریخ امروز: ${jy}/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2, '0')} | ساعت: ${hour}:${minute}:${second}`;
+      const container = document.getElementById("datetimeContainer");
+      if (container) container.textContent = datetimeStr;
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    // بستن فرم با کلیک بیرون از محتوا
+    taskFormModal.addEventListener("click", e => {
+      if(e.target === taskFormModal) {
+        closeTaskForm();
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
