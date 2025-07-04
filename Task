@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مدیریت وظایف</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: "IranSans", Tahoma, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 1rem;
+    }
+    h1 { margin-bottom: 1rem; color: #0a1e63; }
+    #datetimeContainer { text-align: center; font-weight: bold; color: #1a2a6c; margin-bottom: 0.7rem; }
+
+    .controls { display: flex; gap:12px; margin-bottom:1rem; }
+    button { cursor: pointer; background:#1a2a6c; color:white; border:none; border-radius:6px; padding:0.6rem 1.2rem; font-size:1rem; }
+
+    table { width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden; }
+    th, td { padding:0.6rem; text-align:center; }
+    thead th { background:#1a2a6c; color:white; }
+    tbody tr { border-bottom:1px solid #ccc; }
+    tbody tr:last-child { border-bottom:none; }
+
+    td.actions button.edit { background:#00a8ff; }
+    td.actions button.delete { background:#ff3860; }
+    td.actions button.done { background:rgba(40,167,69,0.15); color:#28a745; border:1px solid #28a745; }
+    td.actions button.done.done-active { background:rgba(40,167,69,0.3); }
+
+  </style>
+</head>
+<body>
+  <h1>نرم‌افزار مدیریت وظایف</h1>
+  <div id="datetimeContainer"></div>
+  <div class="controls">
+    <button id="btnNewTask">ثبت وظیفه جدید</button>
+    <button id="btnSaveAll">ذخیره فرم</button>
+  </div>
+
+  <table aria-label="فهرست وظایف">
+    <thead>
+      <tr>
+        <th>شماره</th><th>موضوع</th><th>مهلت</th><th>اهمیت</th><th>عملیات</th>
+      </tr>
+    </thead>
+    <tbody id="taskListBody"></tbody>
+  </table>
+
+  <div id="taskFormModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;">
+    <div style="background:white;padding:1rem;border-radius:8px;max-width:400px;width:90%;">
+      <h3 id="taskFormTitle">ثبت وظیفه جدید</h3>
+      <form id="taskForm">
+        <label>موضوع:<input type="text" id="subjectInput" required style="width:100%;padding:0.4rem;margin-top:0.3rem;" /></label>
+        <label>مهلت:<input type="date" id="deadlineInput" style="width:100%;padding:0.4rem;margin-top:0.3rem;" /></label>
+        <label>اهمیت:<select id="importanceSelect" style="width:100%;padding:0.4rem;margin-top:0.3rem;"><option value="عادی">عادی</option><option value="مهم">مهم</option><option value="ضروری">ضروری</option></select></label>
+        <div style="margin-top:1rem;text-align:center;">
+          <button type="submit" style="margin-right:0.5rem;">ثبت</button>
+          <button type="button" id="btnCancelTask">انصراف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  // تبدیل میلادی به شمسی
+  function gregorianToJalali(gy,gm,gd){ /* توابع ... */
+    const g_d_m=[0,31,59,90,120,151,181,212,243,273,304,334];
+    let jy=(gy>1600?979:0), gy2=(gm>2?gy+1:gy), days=365*(gy-(gy>1600?1600:621))+Math.floor((gy2+3)/4)-Math.floor((gy2+99)/100)+Math.floor((gy2+399)/400)-80+gd+g_d_m[gm-1];
+    jy+=33*Math.floor(days/12053); days%=12053;
+    jy+=4*Math.floor(days/1461); days%=1461;
+    if(days>365){jy+=Math.floor((days-1)/365); days=(days-1)%365;}
+    let jm=days<186?1+Math.floor(days/31):7+Math.floor((days-186)/30);
+    let jd=1+((days<186?days:days-186)% (days<186?31:30)); return [jy,jm,jd];
+  }
+  function updateDateTime(){ let now=new Date(); let [jy,jm,jd]=gregorianToJalali(now.getFullYear(),now.getMonth()+1,now.getDate()); let h=now.getHours().toString().padStart(2,'0'), m=now.getMinutes().toString().padStart(2,'0'), s=now.getSeconds().toString().padStart(2,'0'); document.getElementById('datetimeContainer').textContent = `تاریخ: ${jy}/${jm.toString().padStart(2,'0')}/${jd.toString().padStart(2,'0')} | ساعت: ${h}:${m}:${s}`; }
+  setInterval(updateDateTime,1000); updateDateTime();
+
+  // مدیریت وظایف
+  let tasks = JSON.parse(localStorage.getItem('tasks')||'[]');
+  function saveTasks(){ localStorage.setItem('tasks',JSON.stringify(tasks)); }
+  function renderTaskList(){ const tbody=document.getElementById('taskListBody'); tbody.innerHTML=''; if(tasks.length===0){ tbody.innerHTML='<tr><td colspan="5">هیچ وظیفه‌ای ثبت نشده</td></tr>'; return;} tasks.forEach((task,i)=>{ const tr=document.createElement('tr'); if(task.done) tr.classList.add('task-done'); tr.innerHTML=`<td>${i+1}</td><td>${task.subject}</td><td>${task.deadline||''}</td><td>${task.importance}</td><td class="actions"></td>`; const tdA=tr.querySelector('.actions');
+    // ویرایش
+    let btnEdit=document.createElement('button'); btnEdit.textContent='ویرایش'; btnEdit.onclick=()=>openTaskForm(task); tdA.appendChild(btnEdit);
+    // حذف
+    let btnDel=document.createElement('button'); btnDel.textContent='حذف'; btnDel.onclick=()=>{ tasks=tasks.filter(t=>t.id!==task.id); saveTasks(); renderTaskList(); }; tdA.appendChild(btnDel);
+    // انجام شد
+    let btnDone=document.createElement('button'); btnDone.textContent='انجام شد'; btnDone.className='done'+(task.done?' done-active':''); btnDone.onclick=()=>{ task.done=true; saveTasks(); tr.classList.add('task-done'); btnDone.classList.add('done-active'); }; tdA.appendChild(btnDone);
+    tbody.appendChild(tr);
+  }); }
+
+  function openTaskForm(task){ document.getElementById('taskFormModal').style.display='flex'; document.getElementById('taskFormTitle').textContent = task?'ویرایش':'ثبت'; document.getElementById('subjectInput').value = task?task.subject:''; document.getElementById('deadlineInput').value = task?task.deadline:''; document.getElementById('importanceSelect').value = task?task.importance:'عادی'; document.getElementById('taskForm').onsubmit = e=>{ e.preventDefault(); let subj=document.getElementById('subjectInput').value; let dl=document.getElementById('deadlineInput').value; let imp=document.getElementById('importanceSelect').value; if(task){ task.subject=subj; task.deadline=dl; task.importance=imp; } else { tasks.push({ id:Date.now(), subject:subj, deadline:dl, importance:imp, done:false }); } saveTasks(); renderTaskList(); closeTaskForm(); };
+  }
+  function closeTaskForm(){ document.getElementById('taskFormModal').style.display='none'; }
+
+  document.getElementById('btnNewTask').onclick=()=>openTaskForm();
+  document.getElementById('btnCancelTask').onclick=closeTaskForm;
+  document.getElementById('btnSaveAll').onclick=()=>{ saveTasks(); alert('ذخیره شد'); };
+
+  renderTaskList();
+</script>
+</body>
+</html>
+
